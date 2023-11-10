@@ -2,6 +2,7 @@ import React, { useState, useContext, useCallback, useEffect } from "react";
 import { InjectedRouter, Params } from "react-router/lib/Router";
 import { useQuery } from "react-query";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
+import classNames from "classnames";
 
 import { pick, findIndex } from "lodash";
 
@@ -85,6 +86,17 @@ const DeviceUserPage = ({
   const [globalConfig, setGlobalConfig] = useState<IDeviceGlobalConfig | null>(
     null
   );
+
+  const userColorThemePreference: MediaQueryList = window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  );
+
+  userColorThemePreference.addEventListener("change", () => {
+    router.push(location.pathname);
+  });
+
+  const darkMode = userColorThemePreference.matches && "dark-mode";
+  const darkModeClass = classNames(baseClass, darkMode);
 
   const { data: deviceMapping, refetch: refetchDeviceMapping } = useQuery(
     ["deviceMapping", deviceAuthToken],
@@ -509,7 +521,7 @@ const DeviceUserPage = ({
   };
 
   return (
-    <div className="app-wrap">
+    <div className={`app-wrap ${darkModeClass}`}>
       <nav className="site-nav-container">
         <div className="site-nav-content">
           <ul className="site-nav-list">

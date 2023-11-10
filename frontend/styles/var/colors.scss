@@ -26,6 +26,23 @@ $ui-vibrant-blue-25: #d9d9fe;
 $ui-vibrant-blue-10: #f1f0ff; // rgba(241, 240, 255, 1)
 $tooltip-bg: #3e4771;
 
+// UI Dark
+$ui-dark-fleet-75: #161722; // Background of page
+$ui-dark-fleet-50: #20222e; // Nav bar and table header
+$ui-dark-fleet-25: #3a3e4f; // Border color
+$ui-dark-fleet-10: #8388a4; // Background of modal
+$ui-dark-white: #fff; // Primary text
+$ui-dark-grey: #a1a4b7; // Secondary text
+$ui-dark-border: #414557; // Modal border color
+$ui-dark-modal-background: rgba(122, 134, 158, 0.05); // Modal background
+$ui-dark-focus: $core-vibrant-blue; // Focus outlines
+$ui-dark-button: $core-vibrant-red; // Primary buttons
+$ui-dark-button-gradient: linear-gradient(
+  180deg,
+  rgba(255, 255, 255, 0.2) 0%,
+  rgba(255, 255, 255, 0) 100%
+); // Gradient used in Primary button
+
 // Notifications & status & specific messages
 $ui-offline: #8b8fa2;
 $ui-success: #3db67b;
@@ -76,3 +93,13 @@ $ui-off-white-opaque: rgba(
   (252-249) / $ui-off-white-alpha,
   $ui-off-white-alpha
 );
+
+// Dark mode
+$dark-mode-background: #161722; // Background of page
+$dark-mode-table-header: #20222e; // Nav bar and table header
+$dark-mode-table-border: #3a3e4f; // Border color
+$dark-mode-text: #fff;
+$dark-mode-secondary-text: #808294;
+$dark-mode-focus: $core-vibrant-blue;
+$dark-mode-button: #ff6289;
+$dark-mode-secondary-button: #fe7394;
