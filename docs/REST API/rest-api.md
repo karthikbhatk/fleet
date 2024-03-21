@@ -3875,7 +3875,7 @@ To wipe a macOS or Windows host, the host must have MDM turned on. To lock a Lin
 
 ### Get host's past activity
 
-`GET /api/v1/fleet/hosts/:id/activites/past`
+`GET /api/v1/fleet/hosts/:id/activites`
 
 #### Parameters
 
@@ -3887,7 +3887,9 @@ To wipe a macOS or Windows host, the host must have MDM turned on. To lock a Lin
 
 #### Example
 
-`GET /api/v1/fleet/hosts/12/activities/past`
+`GET /api/v1/fleet/hosts/12/activities`
+
+Examples of all past activities for different operating systems are listed [here](https://github.com/fleetdm/fleet/blob/main/docs/Contributing/Hosts-activities.md#past-activities).
 
 ##### Default response
 
@@ -3899,33 +3901,37 @@ To wipe a macOS or Windows host, the host must have MDM turned on. To lock a Lin
     {
       "created_at": "2023-07-27T14:35:08Z",
       "id": 2,
-      "actor_full_name": "Anna",
+      "actor_full_name": "Marko",
       "actor_id": 1,
       "actor_gravatar": "",
-      "actor_email": "anna@example.com",
+      "actor_email": "marko@example.com",
       "type": "ran_script",
+      "fleet_initiated_activity": false,
       "details": {
         "host_id": 1,
         "host_display_name": "Steve's MacBook Pro",
+        "type": "script",
         "script_name": "set-timezones.sh",
-        "script_execution_id": "d6cffa75-b5b5-41ef-9230-15073c8a88cf",
+        "script_execution_id": "11fb7bcc-f9b2-40e7-b02c-93eef339227e",
+        "exit_code": 0,
         "async": true
       },
     },
     {
-      "created_at": "2021-07-27T13:25:21Z",
-      "id": 1,
-      "actor_full_name": "Bob",
+      "created_at": "2024-01-28T13:25:21Z",
+      "id": 2,
+      "actor_full_name": "Rachael",
       "actor_id": 2,
       "actor_gravatar": "",
-      "actor_email": "bob@example.com",
-      "type": "ran_script",
+      "actor_email": "rachael@example.com",
+      "type": "ran_mdm_command",
+      "fleet_initiated_activity": false,
       "details": {
         "host_id": 1,
         "host_display_name": "Steve's MacBook Pro",
-        "script_name": "",
-        "script_execution_id": "y3cffa75-b5b5-41ef-9230-15073c8a88cf",
-        "async": false
+        "type": "mdm_command",
+        "command_uuid": "ea082cdc-e62a-46f5-9dac-be10482565c5",
+        "status": "Pending"
       },
     },
   ],
@@ -3952,6 +3958,8 @@ To wipe a macOS or Windows host, the host must have MDM turned on. To lock a Lin
 
 `GET /api/v1/fleet/hosts/12/activities/upcoming`
 
+Examples of all upcoming activities for different operating systems are listed [here](https://github.com/fleetdm/fleet/blob/main/docs/Contributing/Hosts-activities.md#upcoming-activities).
+
 ##### Default response
 
 `Status: 200`
@@ -3968,28 +3976,31 @@ To wipe a macOS or Windows host, the host must have MDM turned on. To lock a Lin
       "actor_gravatar": "",
       "actor_email": "marko@example.com",
       "type": "ran_script",
+      "fleet_initiated_activity": false,
       "details": {
         "host_id": 1,
         "host_display_name": "Steve's MacBook Pro",
+        "type": "script",
         "script_name": "set-timezones.sh",
-        "script_execution_id": "d6cffa75-b5b5-41ef-9230-15073c8a88cf",
+        "script_execution_id": "11fb7bcc-f9b2-40e7-b02c-93eef339227e",
         "async": true
       },
     },
     {
-      "created_at": "2021-07-27T13:25:21Z",
+      "created_at": "2023-08-24T13:25:21Z",
       "uuid": "y3cffa75-b5b5-41ef-9230-15073c8a88cf",
       "actor_full_name": "Rachael",
-      "actor_id": 1,
+      "actor_id": 2,
       "actor_gravatar": "",
       "actor_email": "rachael@example.com",
-      "type": "ran_script",
+      "type": "ran_mdm_command",
+      "fleet_initiated_activity": false,
       "details": {
         "host_id": 1,
         "host_display_name": "Steve's MacBook Pro",
-        "script_name": "",
-        "script_execution_id": "y3cffa75-b5b5-41ef-9230-15073c8a88cf",
-        "async": false
+        "type": "mdm_command",
+        "command_uuid": "ea082cdc-e62a-46f5-9dac-be10482565c5",
+        "status": "Pending"
       },
     },
   ],
