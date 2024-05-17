@@ -216,36 +216,37 @@ const ManageHostsPage = ({
   const [isUpdatingSecret, setIsUpdatingSecret] = useState<boolean>(false);
   const [isUpdatingHosts, setIsUpdatingHosts] = useState<boolean>(false);
 
-  // ========= queryParams
+  // ========= queryParams(order matches rest-api.md)
+  const status = isAcceptableStatus(queryParams?.status)
+    ? queryParams?.status
+    : undefined;
+  const missingHosts = queryParams?.status === "missing";
   const policyId = queryParams?.policy_id;
   const policyResponse: PolicyResponse = queryParams?.policy_response;
-  const macSettingsStatus = queryParams?.macos_settings;
   const softwareId =
     queryParams?.software_id !== undefined
       ? parseInt(queryParams.software_id, 10)
-      : undefined;
-  const softwareVersionId =
-    queryParams?.software_version_id !== undefined
-      ? parseInt(queryParams.software_version_id, 10)
       : undefined;
   const softwareTitleId =
     queryParams?.software_title_id !== undefined
       ? parseInt(queryParams.software_title_id, 10)
       : undefined;
-  const status = isAcceptableStatus(queryParams?.status)
-    ? queryParams?.status
-    : undefined;
+  const softwareVersionId =
+    queryParams?.software_version_id !== undefined
+      ? parseInt(queryParams.software_version_id, 10)
+      : undefined;
+  const vulnerability = queryParams?.vulnerability;
   const mdmId =
     queryParams?.mdm_id !== undefined
       ? parseInt(queryParams.mdm_id, 10)
       : undefined;
   const mdmEnrollmentStatus = queryParams?.mdm_enrollment_status;
+  const macSettingsStatus = queryParams?.macos_settings;
   const {
     os_version_id: osVersionId,
     os_name: osName,
     os_version: osVersion,
   } = queryParams;
-  const vulnerability = queryParams?.vulnerability;
   const munkiIssueId =
     queryParams?.munki_issue_id !== undefined
       ? parseInt(queryParams.munki_issue_id, 10)
@@ -254,14 +255,14 @@ const ManageHostsPage = ({
     queryParams?.low_disk_space !== undefined
       ? parseInt(queryParams.low_disk_space, 10)
       : undefined;
-  const missingHosts = queryParams?.status === "missing";
+  const bootstrapPackageStatus: BootstrapPackageStatus | undefined =
+    queryParams?.bootstrap_package;
   const osSettingsStatus = queryParams?.[PARAMS.OS_SETTINGS];
   const diskEncryptionStatus: DiskEncryptionStatus | undefined =
     queryParams?.[PARAMS.DISK_ENCRYPTION];
-  const bootstrapPackageStatus: BootstrapPackageStatus | undefined =
-    queryParams?.bootstrap_package;
 
   // ========= routeParams
+  // TODO: Find out if where and how activeLabel is being use
   const { active_label: activeLabel, label_id: labelID } = routeParams;
   const selectedFilters = useMemo(() => {
     const filters: string[] = [];
@@ -269,6 +270,34 @@ const ManageHostsPage = ({
     activeLabel && filters.push(activeLabel);
     return filters;
   }, [activeLabel, labelID]);
+
+  // ========= hostsApiParams used for the following API calls:
+  //  list hosts, hosts count, bulk transfer, bulk delete, export hosts
+  // Order matches rest-api.md > List hosts parameters
+  // TODO: Find out if where and how selectedFilters is being use
+  const hostsApiParams = {
+    status,
+    query: searchQuery,
+    teamId: teamIdForApi,
+    policyId,
+    policyResponse,
+    softwareId,
+    softwareVersionId,
+    softwareTitleId,
+    osVersionId,
+    osName,
+    osVersion,
+    vulnerability,
+    labelId: selectedLabel?.id,
+    mdmId,
+    mdmEnrollmentStatus,
+    macSettingsStatus,
+    munkiIssueId,
+    lowDiskSpaceHosts,
+    bootstrapPackageStatus,
+    osSettings: osSettingsStatus,
+    diskEncryptionStatus,
+  };
 
   // ========= derived permissions
   const canEnrollHosts =
@@ -371,31 +400,13 @@ const ManageHostsPage = ({
     [
       {
         scope: "hosts",
-        selectedLabels: selectedFilters,
-        globalFilter: searchQuery,
-        sortBy,
-        teamId: teamIdForApi,
-        policyId,
-        policyResponse,
-        softwareId,
-        softwareTitleId,
-        softwareVersionId,
-        status,
-        mdmId,
-        mdmEnrollmentStatus,
-        munkiIssueId,
-        lowDiskSpaceHosts,
-        osVersionId,
-        osName,
-        osVersion,
-        vulnerability,
         page: tableQueryData ? tableQueryData.pageIndex : 0,
         perPage: tableQueryData ? tableQueryData.pageSize : 50,
-        device_mapping: true,
-        osSettings: osSettingsStatus,
-        diskEncryptionStatus,
-        bootstrapPackageStatus,
-        macSettingsStatus,
+        sortBy,
+        ...hostsApiParams,
+        // TODO: Find out if where and how selectedFilters is being use
+        selectedLabels: selectedFilters,
+        deviceMapping: true,
       },
     ],
     ({ queryKey }) => hostsAPI.loadHosts(queryKey[0]),
@@ -415,27 +426,9 @@ const ManageHostsPage = ({
     [
       {
         scope: "hosts_count",
+        // TODO: Find out if where and how selectedFilters is being use
         selectedLabels: selectedFilters,
-        globalFilter: searchQuery,
-        teamId: teamIdForApi,
-        policyId,
-        policyResponse,
-        softwareId,
-        softwareTitleId,
-        softwareVersionId,
-        status,
-        mdmId,
-        mdmEnrollmentStatus,
-        munkiIssueId,
-        lowDiskSpaceHosts,
-        osVersionId,
-        osName,
-        osVersion,
-        vulnerability,
-        osSettings: osSettingsStatus,
-        diskEncryptionStatus,
-        bootstrapPackageStatus,
-        macSettingsStatus,
+        ...hostsApiParams,
       },
     ],
     ({ queryKey }) => hostCountAPI.load(queryKey[0]),
@@ -854,32 +847,32 @@ const ManageHostsPage = ({
     [
       isRouteOk,
       tableQueryData,
-      sortBy,
-      searchQuery,
-      teamIdForApi,
-      status,
-      policyId,
-      policyResponse,
-      macSettingsStatus,
-      softwareId,
-      softwareVersionId,
-      softwareTitleId,
-      mdmId,
-      mdmEnrollmentStatus,
-      munkiIssueId,
-      missingHosts,
-      lowDiskSpaceHosts,
       isPremiumTier,
-      osVersionId,
-      osName,
-      osVersion,
       page,
       router,
       routeTemplate,
       routeParams,
-      osSettingsStatus,
+      sortBy,
+      searchQuery,
+      status,
+      teamIdForApi,
+      policyId,
+      policyResponse,
+      macSettingsStatus,
+      softwareId,
+      softwareTitleId,
+      softwareVersionId,
+      mdmId,
+      mdmEnrollmentStatus,
+      munkiIssueId,
       diskEncryptionStatus,
       bootstrapPackageStatus,
+      lowDiskSpaceHosts,
+      osSettingsStatus,
+      osName,
+      osVersion,
+      osVersionId,
+      missingHosts,
       vulnerability,
     ]
   );
@@ -1048,40 +1041,21 @@ const ManageHostsPage = ({
   const onTransferHostSubmit = async (transferTeam: ITeam) => {
     setIsUpdatingHosts(true);
 
-    const teamId = typeof transferTeam.id === "number" ? transferTeam.id : null;
+    const transferTeamId =
+      typeof transferTeam.id === "number" ? transferTeam.id : null;
 
     const action = isAllMatchingHostsSelected
       ? hostsAPI.transferToTeamByFilter({
-          teamId,
-          query: searchQuery,
-          status,
-          labelId: selectedLabel?.id,
-          currentTeam: teamIdForApi,
-          policyId,
-          policyResponse,
-          softwareId,
-          softwareTitleId,
-          softwareVersionId,
-          osName,
-          osVersionId,
-          osVersion,
-          macSettingsStatus,
-          bootstrapPackageStatus,
-          mdmId,
-          mdmEnrollmentStatus,
-          munkiIssueId,
-          lowDiskSpaceHosts,
-          osSettings: osSettingsStatus,
-          diskEncryptionStatus,
-          vulnerability,
+          transferTeamId,
+          ...hostsApiParams,
         })
-      : hostsAPI.transferToTeam(teamId, selectedHostIds);
+      : hostsAPI.transferToTeam(transferTeamId, selectedHostIds);
 
     try {
       await action;
 
       const successMessage =
-        teamId === null
+        transferTeamId === null
           ? `Hosts successfully removed from teams.`
           : `Hosts successfully transferred to  ${transferTeam.name}.`;
 
@@ -1105,27 +1079,7 @@ const ManageHostsPage = ({
     try {
       await (isAllMatchingHostsSelected
         ? hostsAPI.destroyByFilter({
-            teamId: teamIdForApi,
-            query: searchQuery,
-            status,
-            labelId: selectedLabel?.id,
-            policyId,
-            policyResponse,
-            softwareId,
-            softwareTitleId,
-            softwareVersionId,
-            osName,
-            osVersionId,
-            osVersion,
-            macSettingsStatus,
-            bootstrapPackageStatus,
-            mdmId,
-            mdmEnrollmentStatus,
-            munkiIssueId,
-            lowDiskSpaceHosts,
-            osSettings: osSettingsStatus,
-            diskEncryptionStatus,
-            vulnerability,
+            ...hostsApiParams,
           })
         : hostsAPI.destroyBulk(selectedHostIds));
 
@@ -1314,34 +1268,12 @@ const ManageHostsPage = ({
       visibleColumns = columnIds.join(",");
     }
 
-    let options = {
-      selectedLabels: selectedFilters,
-      globalFilter: searchQuery,
-      sortBy,
-      teamId: teamIdForApi,
-      policyId,
-      policyResponse,
-      macSettingsStatus,
-      softwareId,
-      softwareTitleId,
-      softwareVersionId,
-      status,
-      mdmId,
-      mdmEnrollmentStatus,
-      munkiIssueId,
-      lowDiskSpaceHosts,
-      osName,
-      osVersionId,
-      osVersion,
-      osSettings: osSettingsStatus,
-      bootstrapPackageStatus,
-      vulnerability,
+    const options = {
       visibleColumns,
-    };
-
-    options = {
-      ...options,
-      teamId: teamIdForApi,
+      sortBy,
+      // TODO: Find out if where and how selectedFilters is being use
+      selectedLabels: selectedFilters,
+      ...hostsApiParams,
     };
 
     if (queryParams.team_id) {
