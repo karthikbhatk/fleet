@@ -23,16 +23,20 @@ import (
 const policyCols = `
 	p.id, p.team_id, p.resolution, p.name, p.query, p.description,
 	p.author_id, p.platforms, p.created_at, p.updated_at, p.critical,
-	p.calendar_events_enabled, p.software_installer_id
+	p.calendar_events_enabled, p.software_installer_id, p.script_id
 `
 
-var errSoftwareTitleIDOnGlobalPolicy = errors.New("install software title id can be set on team policies only")
+var errSoftwareTitleIDOnGlobalPolicy = errors.New("install software title id can be only be set on team policies")
+var errScriptIDOnGlobalPolicy = errors.New("run script id can only be set on team policies")
 
 var policySearchColumns = []string{"p.name"}
 
 func (ds *Datastore) NewGlobalPolicy(ctx context.Context, authorID *uint, args fleet.PolicyPayload) (*fleet.Policy, error) {
 	if args.SoftwareInstallerID != nil {
 		return nil, ctxerr.Wrap(ctx, errSoftwareTitleIDOnGlobalPolicy, "create policy")
+	}
+	if args.ScriptID != nil {
+		return nil, ctxerr.Wrap(ctx, errScriptIDOnGlobalPolicy, "create policy")
 	}
 	if args.QueryID != nil {
 		q, err := ds.Query(ctx, *args.QueryID)
@@ -137,15 +141,25 @@ func (ds *Datastore) SavePolicy(ctx context.Context, p *fleet.Policy, shouldRemo
 	if p.TeamID == nil && p.SoftwareInstallerID != nil {
 		return ctxerr.Wrap(ctx, errSoftwareTitleIDOnGlobalPolicy, "save policy")
 	}
+	if p.TeamID == nil && p.ScriptID != nil {
+		return ctxerr.Wrap(ctx, errScriptIDOnGlobalPolicy, "save policy")
+	}
+
+	if p.TeamID != nil {
+		if err := assertTeamMatches(ctx, *p.TeamID, p.SoftwareInstallerID, p.ScriptID); err != nil {
+			return ctxerr.Wrap(ctx, err, "save policy")
+		}
+	}
+
 	// We must normalize the name for full Unicode support (Unicode equivalence).
 	p.Name = norm.NFC.String(p.Name)
 	sql := `
 		UPDATE policies
-			SET name = ?, query = ?, description = ?, resolution = ?, platforms = ?, critical = ?, calendar_events_enabled = ?, software_installer_id = ?, checksum = ` + policiesChecksumComputedColumn() + `
+			SET name = ?, query = ?, description = ?, resolution = ?, platforms = ?, critical = ?, calendar_events_enabled = ?, software_installer_id = ?, script_id = ?, checksum = ` + policiesChecksumComputedColumn() + `
 			WHERE id = ?
 	`
 	result, err := ds.writer(ctx).ExecContext(
-		ctx, sql, p.Name, p.Query, p.Description, p.Resolution, p.Platform, p.Critical, p.CalendarEventsEnabled, p.SoftwareInstallerID, p.ID,
+		ctx, sql, p.Name, p.Query, p.Description, p.Resolution, p.Platform, p.Critical, p.CalendarEventsEnabled, p.SoftwareInstallerID, p.ScriptID, p.ID,
 	)
 	if err != nil {
 		return ctxerr.Wrap(ctx, err, "updating policy")
@@ -161,6 +175,18 @@ func (ds *Datastore) SavePolicy(ctx context.Context, p *fleet.Policy, shouldRemo
 	return cleanupPolicy(
 		ctx, ds.reader(ctx), ds.writer(ctx), p.ID, p.Platform, shouldRemoveAllPolicyMemberships, removePolicyStats, ds.logger,
 	)
+}
+
+func assertTeamMatches(ctx context.Context, teamID uint, softwareInstallerID *uint, scriptID *uint) error {
+	if softwareInstallerID != nil {
+		// TODO fail if wrong team
+	}
+
+	if scriptID != nil {
+		// TODO fail if wrong team
+	}
+
+	return nil
 }
 
 func cleanupPolicy(
@@ -492,8 +518,7 @@ func (ds *Datastore) PoliciesByID(ctx context.Context, ids []uint) (map[uint]*fl
 	  COALESCE(u.email, '') AS author_email,
 	  ps.updated_at as host_count_updated_at,
 	  COALESCE(ps.passing_host_count, 0) as passing_host_count,
-	  COALESCE(ps.failing_host_count, 0) as failing_host_count,
-	  p.software_installer_id
+	  COALESCE(ps.failing_host_count, 0) as failing_host_count
 	  FROM policies p
 	  LEFT JOIN users u ON p.author_id = u.id
 	  LEFT JOIN policy_stats ps ON p.id = ps.policy_id
@@ -606,13 +631,18 @@ func (ds *Datastore) NewTeamPolicy(ctx context.Context, teamID uint, authorID *u
 	}
 	// We must normalize the name for full Unicode support (Unicode equivalence).
 	nameUnicode := norm.NFC.String(args.Name)
+
+	if err := assertTeamMatches(ctx, teamID, args.SoftwareInstallerID, args.ScriptID); err != nil {
+		return nil, ctxerr.Wrap(ctx, err, "create team policy")
+	}
+
 	res, err := ds.writer(ctx).ExecContext(ctx,
 		fmt.Sprintf(
-			`INSERT INTO policies (name, query, description, team_id, resolution, author_id, platforms, critical, calendar_events_enabled, software_installer_id, checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, %s)`,
+			`INSERT INTO policies (name, query, description, team_id, resolution, author_id, platforms, critical, calendar_events_enabled, software_installer_id, script_id, checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, %s)`,
 			policiesChecksumComputedColumn(),
 		),
 		nameUnicode, args.Query, args.Description, teamID, args.Resolution, authorID, args.Platform, args.Critical,
-		args.CalendarEventsEnabled, args.SoftwareInstallerID,
+		args.CalendarEventsEnabled, args.SoftwareInstallerID, args.ScriptID,
 	)
 	switch {
 	case err == nil:
@@ -1521,6 +1551,22 @@ func (ds *Datastore) GetPoliciesWithAssociatedInstaller(ctx context.Context, tea
 	var policies []fleet.PolicySoftwareInstallerData
 	if err := sqlx.SelectContext(ctx, ds.reader(ctx), &policies, query, args...); err != nil {
 		return nil, ctxerr.Wrap(ctx, err, "get policies with associated installer")
+	}
+	return policies, nil
+}
+
+func (ds *Datastore) GetPoliciesWithAssociatedScript(ctx context.Context, teamID uint, policyIDs []uint) ([]fleet.PolicyScriptData, error) {
+	if len(policyIDs) == 0 {
+		return nil, nil
+	}
+	query := `SELECT id, script_id FROM policies WHERE team_id = ? AND script_id IS NOT NULL AND id IN (?);`
+	query, args, err := sqlx.In(query, teamID, policyIDs)
+	if err != nil {
+		return nil, ctxerr.Wrapf(ctx, err, "build sqlx.In for get policies with associated script")
+	}
+	var policies []fleet.PolicyScriptData
+	if err := sqlx.SelectContext(ctx, ds.reader(ctx), &policies, query, args...); err != nil {
+		return nil, ctxerr.Wrap(ctx, err, "get policies with associated script")
 	}
 	return policies, nil
 }
